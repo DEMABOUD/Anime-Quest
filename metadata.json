@@ -1,0 +1,6 @@
+{
+  "name": "Anime Quest",
+  "description": "Jeu multijoueur et réseau social ultime dédié aux anime et mangas : quiz, duels, guildes, classements et discussions en direct.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

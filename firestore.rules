@@ -1,0 +1,162 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isMasterAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'demaboudjunior07@gmail.com' ||
+        request.auth.token.email == 'nickdemaboud@gmail.com'
+      );
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isMasterAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 0. Admins
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 1. User Profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId 
+        && incoming().uid == request.auth.uid
+        && incoming().username is string && incoming().username.size() >= 3 && incoming().username.size() <= 30
+        && incoming().displayName is string && incoming().displayName.size() >= 2 && incoming().displayName.size() <= 50
+        && incoming().bio is string && incoming().bio.size() <= 500
+        && incoming().photoURL is string && incoming().photoURL.size() <= 1000000;
+        
+      allow update: if isSignedIn() 
+        && request.auth.uid == userId
+        && incoming().uid == existing().uid
+        && (incoming().username is string && incoming().username.size() >= 3 && incoming().username.size() <= 30)
+        && (incoming().displayName is string && incoming().displayName.size() >= 2 && incoming().displayName.size() <= 50)
+        && (incoming().bio is string && incoming().bio.size() <= 500);
+
+      allow delete: if false;
+    }
+
+    // 2. Unique Usernames
+    match /usernames/{username} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() 
+        && isValidId(username) 
+        && incoming().uid == request.auth.uid
+        && incoming().username == username;
+      allow update: if false;
+      allow delete: if isSignedIn() && existing().uid == request.auth.uid;
+    }
+
+    // 3. Friendships
+    match /friendships/{friendshipId} {
+      allow read: if isSignedIn() && (
+        resource.data.senderUid == request.auth.uid || 
+        resource.data.receiverUid == request.auth.uid
+      );
+      
+      allow create: if isSignedIn() 
+        && isValidId(friendshipId)
+        && incoming().senderUid == request.auth.uid
+        && incoming().receiverUid != request.auth.uid
+        && incoming().status == 'pending';
+
+      allow update: if isSignedIn() && (
+        (existing().receiverUid == request.auth.uid && (incoming().status == 'accepted' || incoming().status == 'declined')) ||
+        (existing().senderUid == request.auth.uid || existing().receiverUid == request.auth.uid)
+      );
+
+      allow delete: if isSignedIn() && (
+        existing().senderUid == request.auth.uid || 
+        existing().receiverUid == request.auth.uid
+      );
+    }
+
+    // 4. Conversations & Private Messages
+    match /conversations/{conversationId} {
+      allow read, write: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() 
+          && incoming().senderUid == request.auth.uid
+          && incoming().content is string && incoming().content.size() > 0 && incoming().content.size() <= 2000;
+        allow update, delete: if false;
+      }
+    }
+
+    // 5. Community Groups
+    match /groups/{groupId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() 
+        && incoming().creatorUid == request.auth.uid
+        && incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 60;
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && existing().creatorUid == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() 
+          && incoming().senderUid == request.auth.uid
+          && incoming().content is string && incoming().content.size() > 0 && incoming().content.size() <= 2000;
+        allow update, delete: if false;
+      }
+    }
+
+    // 6. Guilds
+    match /guilds/{guildId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() 
+        && incoming().leaderUid == request.auth.uid
+        && incoming().name is string && incoming().name.size() >= 3 && incoming().name.size() <= 50
+        && incoming().manga is string && incoming().manga.size() >= 2;
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && existing().leaderUid == request.auth.uid;
+    }
+
+    // 7. Quiz Games & Matchmaking
+    match /games/{gameId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /duel_matches/{matchId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /matchmaking_queue/{userId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /friend_challenges/{challengeId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Profil public et données de jeu d'un utilisateur d'Anime Quest (strictement confidentiel, aucun compte Google ou email affiché)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "username": { "type": "string", "minLength": 3, "maxLength": 30, "pattern": "^[a-zA-Z0-9_]+$" },
+        "displayName": { "type": "string", "minLength": 2, "maxLength": 50 },
+        "photoURL": { "type": "string", "maxLength": 1000000 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "level": { "type": "number" },
+        "xp": { "type": "number" },
+        "wins": { "type": "number" },
+        "losses": { "type": "number" },
+        "totalGames": { "type": "number" },
+        "points": { "type": "number" },
+        "rankTitle": { "type": "string", "maxLength": 50 },
+        "guildId": { "type": "string", "maxLength": 128 },
+        "isOnline": { "type": "boolean" },
+        "lastSeen": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "username", "displayName", "photoURL", "bio"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Utilisateurs disposant des priorités d'administration et de révélation des réponses",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "username": { "type": "string", "maxLength": 50 },
+        "displayName": { "type": "string", "maxLength": 50 },
+        "grantedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid"]
+    },
+    "UsernameReservation": {
+      "title": "UsernameReservation",
+      "description": "Réservation unique d'un nom d'utilisateur pour garantir l'unicité stricte",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "username": { "type": "string", "minLength": 3, "maxLength": 30 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "username"]
+    },
+    "Friendship": {
+      "title": "Friendship",
+      "description": "Relation d'amitié ou demande entre deux joueurs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "senderUid": { "type": "string", "maxLength": 128 },
+        "receiverUid": { "type": "string", "maxLength": 128 },
+        "senderUsername": { "type": "string", "maxLength": 30 },
+        "receiverUsername": { "type": "string", "maxLength": 30 },
+        "senderName": { "type": "string", "maxLength": 50 },
+        "receiverName": { "type": "string", "maxLength": 50 },
+        "senderPhoto": { "type": "string", "maxLength": 1000000 },
+        "receiverPhoto": { "type": "string", "maxLength": 1000000 },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"] },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["senderUid", "receiverUid", "status"]
+    },
+    "DuelMatch": {
+      "title": "DuelMatch",
+      "description": "Match de duel en direct entre deux joueurs réels ou avec fallback robot",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "mangaCategory": { "type": "string", "maxLength": 50 },
+        "player1": { "type": "string" },
+        "player2": { "type": "string" },
+        "status": { "type": "string", "enum": ["waiting", "in_progress", "completed"] },
+        "winnerUid": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["status", "mangaCategory"]
+    },
+    "FriendChallenge": {
+      "title": "FriendChallenge",
+      "description": "Invitation directe à un duel entre deux amis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "fromUid": { "type": "string", "maxLength": 128 },
+        "fromName": { "type": "string", "maxLength": 50 },
+        "fromPhoto": { "type": "string", "maxLength": 1000000 },
+        "toUid": { "type": "string", "maxLength": 128 },
+        "toName": { "type": "string", "maxLength": 50 },
+        "manga": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"] },
+        "matchId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["fromUid", "toUid", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Profils publics des joueurs sans aucun compte Google exposé"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminRecord",
+      "description": "Utilisateurs avec privilèges d'administration et d'oracle des quiz"
+    },
+    "/usernames/{username}": {
+      "schema": "UsernameReservation",
+      "description": "Réservation des noms d'utilisateurs uniques"
+    },
+    "/friendships/{friendshipId}": {
+      "schema": "Friendship",
+      "description": "Demandes et relations d'amitié"
+    },
+    "/duel_matches/{matchId}": {
+      "schema": "DuelMatch",
+      "description": "Matchs de duel synchronisés en temps réel"
+    },
+    "/matchmaking_queue/{userId}": {
+      "schema": "DuelMatch",
+      "description": "File d'attente pour matchmaking multijoueur réel"
+    },
+    "/friend_challenges/{challengeId}": {
+      "schema": "FriendChallenge",
+      "description": "Invitations directes entre amis"
+    }
+  }
+}
